@@ -1,0 +1,492 @@
+<!-- HEADER CORPORATIVO B2B / SAAS -->
+<ion-header [translucent]="true" class="ion-no-border main-header">
+  <ion-toolbar class="header-toolbar">
+    <div class="header-inner">
+      <div class="brand-box">
+        <div class="brand-logo">
+          <ion-icon name="shield-checkmark"></ion-icon>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">CampusAudit<span class="pro-tag">PRO</span></span>
+          <span class="brand-subtitle">Auditoría & Control de Espacios</span>
+        </div>
+      </div>
+
+      <!-- Chip de Conectividad con Sensor en Tiempo Real -->
+      <div class="status-badge" [ngClass]="estadoRed.connected ? 'status-online' : 'status-offline'">
+        <span class="pulse-indicator"></span>
+        <ion-icon [name]="estadoRed.connected ? 'wifi' : 'cloud-offline'"></ion-icon>
+        <span class="status-txt">{{ estadoRed.connected ? 'En Línea' : 'Offline' }}</span>
+      </div>
+    </div>
+  </ion-toolbar>
+
+  <!-- Banner Dinámico Offline -->
+  <div *ngIf="!estadoRed.connected" class="enterprise-offline-banner">
+    <div class="offline-icon-box">
+      <ion-icon name="hardware-chip-outline"></ion-icon>
+    </div>
+    <div class="offline-text">
+      <strong>Persistencia Local Segura Activa:</strong>
+      <span>Toda auditoría se almacena de forma no volátil en el dispositivo.</span>
+    </div>
+  </div>
+
+  <!-- Barra de Pestañas Principales -->
+  <ion-toolbar class="nav-segment-toolbar">
+    <ion-segment [(ngModel)]="segmentoActivo" mode="ios" class="custom-nav-segment">
+      <ion-segment-button value="dashboard">
+        <ion-icon name="grid-outline"></ion-icon>
+        <ion-label>Dashboard</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="formulario">
+        <ion-icon name="add-circle-outline"></ion-icon>
+        <ion-label>Nueva Auditoría</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="listado">
+        <ion-icon name="file-tray-full-outline"></ion-icon>
+        <ion-label>Registros ({{ inspecciones.length }})</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-container">
+
+  <!-- ======================================================= -->
+  <!-- VISTA 1: DASHBOARD EJECUTIVO Y ANALÍTICA                -->
+  <!-- ======================================================= -->
+  <div *ngIf="segmentoActivo === 'dashboard'" class="dashboard-wrapper">
+    
+    <!-- Hero Card: Estado del Campus -->
+    <div class="hero-status-card">
+      <div class="hero-top">
+        <div>
+          <span class="hero-badge">ÍNDICE INSTITUCIONAL</span>
+          <h2>Operatividad de Infraestructura</h2>
+        </div>
+        <div class="health-percent-badge">
+          <span class="percent-num">{{ calcularPorcentajeSalud() }}%</span>
+          <span class="percent-label">Salud del Campus</span>
+        </div>
+      </div>
+
+      <p class="hero-desc">
+        Monitoreo en tiempo real de novedades en aulas, laboratorios y zonas académicas con almacenamiento offline sincronizado.
+      </p>
+
+      <!-- Barra de progreso visual -->
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" [style.width.%]="calcularPorcentajeSalud()"></div>
+      </div>
+
+      <div class="hero-actions">
+        <button class="hero-btn-primary" (click)="segmentoActivo = 'formulario'">
+          <ion-icon name="add-circle"></ion-icon>
+          <span>Nueva Inspección</span>
+        </button>
+        <button class="hero-btn-secondary" (click)="exportarReporteEjecutivo()">
+          <ion-icon name="document-text-outline"></ion-icon>
+          <span>Informe Ejecutivo</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI Grid -->
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-total" (click)="segmentoActivo = 'listado'; filtrarPorPrioridad('Todas')">
+        <div class="kpi-icon-box icon-blue">
+          <ion-icon name="albums-outline"></ion-icon>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-val">{{ inspecciones.length }}</span>
+          <span class="kpi-lbl">Total Novedades</span>
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-critica" (click)="segmentoActivo = 'listado'; filtrarPorPrioridad('Alta')">
+        <div class="kpi-icon-box icon-red">
+          <ion-icon name="alert-circle-outline"></ion-icon>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-val">{{ contarPorPrioridad('Alta') }}</span>
+          <span class="kpi-lbl">Críticas / Alta</span>
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-media" (click)="segmentoActivo = 'listado'; filtrarPorPrioridad('Media')">
+        <div class="kpi-icon-box icon-amber">
+          <ion-icon name="warning-outline"></ion-icon>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-val">{{ contarPorPrioridad('Media') }}</span>
+          <span class="kpi-lbl">En Seguimiento</span>
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-baja" (click)="segmentoActivo = 'listado'; filtrarPorPrioridad('Baja')">
+        <div class="kpi-icon-box icon-green">
+          <ion-icon name="shield-checkmark-outline"></ion-icon>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-val">{{ contarPorPrioridad('Baja') }}</span>
+          <span class="kpi-lbl">Menores / Leve</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección de Últimos Registros Recientes -->
+    <div class="recent-section">
+      <div class="section-header">
+        <h3>Auditorías Recientes</h3>
+        <a (click)="segmentoActivo = 'listado'">Ver todas ({{ inspecciones.length }})</a>
+      </div>
+
+      <div *ngIf="inspecciones.length > 0; else noRecent" class="recent-list">
+        <div *ngFor="let item of inspecciones.slice(0, 3)" class="recent-mini-card" (click)="segmentoActivo = 'listado'">
+          <div class="mini-left">
+            <span class="ref-code">#{{ item.codigoRef }}</span>
+            <span class="mini-title">{{ item.espacio }}</span>
+            <span class="mini-novelty">{{ item.tipoNovedad }}</span>
+          </div>
+          <div class="mini-right">
+            <span class="badge-priority" [ngClass]="'prio-' + item.prioridad.toLowerCase()">
+              {{ item.prioridad }}
+            </span>
+            <span class="mini-date">{{ formatearFecha(item.fechaRegistro) }}</span>
+          </div>
+        </div>
+      </div>
+      <ng-template #noRecent>
+        <div class="empty-mini-box">
+          <p>Aún no hay inspecciones registradas en este dispositivo.</p>
+        </div>
+      </ng-template>
+    </div>
+
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- VISTA 2: FORMULARIO DE AUDITORÍA PROFESIONAL           -->
+  <!-- ======================================================= -->
+  <div *ngIf="segmentoActivo === 'formulario'" class="form-wrapper">
+    <div class="enterprise-form-card">
+      
+      <div class="form-card-header">
+        <div class="header-pre-title">FORMULARIO TÉCNICO DE CAMPO</div>
+        <h2>Registro de Inspección Académica</h2>
+        <p>Captura de hallazgos con persistencia local @capacitor/preferences</p>
+      </div>
+
+      <div class="form-body">
+        
+        <!-- 1. Categoría y Espacio -->
+        <div class="field-block">
+          <label class="field-label">
+            <ion-icon name="business-outline"></ion-icon>
+            <span>1. Espacio o Instalación Académica *</span>
+          </label>
+
+          <!-- Chips de acceso rápido -->
+          <div class="quick-chip-container">
+            <button
+              type="button"
+              class="quick-pill"
+              [class.pill-selected]="nuevoEspacio === 'Aula 101 - Ciencias Básicas'"
+              (click)="nuevoEspacio = 'Aula 101 - Ciencias Básicas'">
+              Aula 101
+            </button>
+            <button
+              type="button"
+              class="quick-pill"
+              [class.pill-selected]="nuevoEspacio === 'Laboratorio de Redes & Cisco'"
+              (click)="nuevoEspacio = 'Laboratorio de Redes & Cisco'">
+              Lab. Redes
+            </button>
+            <button
+              type="button"
+              class="quick-pill"
+              [class.pill-selected]="nuevoEspacio === 'Biblioteca Central - Piso 2'"
+              (click)="nuevoEspacio = 'Biblioteca Central - Piso 2'">
+              Biblioteca
+            </button>
+            <button
+              type="button"
+              class="quick-pill"
+              [class.pill-selected]="nuevoEspacio === 'Auditorio Principal Los Fundadores'"
+              (click)="nuevoEspacio = 'Auditorio Principal Los Fundadores'">
+              Auditorio
+            </button>
+          </div>
+
+          <div class="input-shell">
+            <ion-select [(ngModel)]="nuevoEspacio" placeholder="Seleccionar del inventario de espacios..." interface="action-sheet">
+              <ion-select-option *ngFor="let esp of espaciosLista" [value]="esp">{{ esp }}</ion-select-option>
+            </ion-select>
+          </div>
+
+          <!-- Input si es personalizado -->
+          <div *ngIf="nuevoEspacio === 'Otro espacio personalizado'" class="input-shell input-sub">
+            <ion-input [(ngModel)]="espacioPersonalizado" placeholder="Escribe el nombre del espacio o ubicación..."></ion-input>
+          </div>
+        </div>
+
+        <!-- 2. Tipo de Novedad -->
+        <div class="field-block">
+          <label class="field-label">
+            <ion-icon name="construct-outline"></ion-icon>
+            <span>2. Categoría de Novedad o Falla *</span>
+          </label>
+
+          <div class="input-shell">
+            <ion-select [(ngModel)]="nuevoTipoNovedad" placeholder="Seleccionar tipo de afectación..." interface="action-sheet">
+              <ion-select-option *ngFor="let t of tiposNovedadConfig" [value]="t.tipo">
+                {{ t.tipo }}
+              </ion-select-option>
+            </ion-select>
+          </div>
+
+          <!-- Input si es otra novedad -->
+          <div *ngIf="nuevoTipoNovedad === 'Otra Novedad Institucional'" class="input-shell input-sub">
+            <ion-input [(ngModel)]="tipoNovedadPersonalizado" placeholder="Especifica el tipo de anomalía encontrada..."></ion-input>
+          </div>
+        </div>
+
+        <!-- 3. Nivel de Prioridad -->
+        <div class="field-block">
+          <label class="field-label">
+            <ion-icon name="speedometer-outline"></ion-icon>
+            <span>3. Nivel de Criticidad y Prioridad *</span>
+          </label>
+
+          <div class="priority-selector-grid">
+            <div
+              class="priority-card prio-card-baja"
+              [class.active-prio]="nuevaPrioridad === 'Baja'"
+              (click)="nuevaPrioridad = 'Baja'">
+              <ion-icon name="checkmark-circle-outline" class="prio-clean-icon"></ion-icon>
+              <span class="prio-name">Baja</span>
+              <span class="prio-hint">Mantenimiento ordinario</span>
+            </div>
+
+            <div
+              class="priority-card prio-card-media"
+              [class.active-prio]="nuevaPrioridad === 'Media'"
+              (click)="nuevaPrioridad = 'Media'">
+              <ion-icon name="alert-circle-outline" class="prio-clean-icon"></ion-icon>
+              <span class="prio-name">Media</span>
+              <span class="prio-hint">Atención en 24-48 hrs</span>
+            </div>
+
+            <div
+              class="priority-card prio-card-alta"
+              [class.active-prio]="nuevaPrioridad === 'Alta'"
+              (click)="nuevaPrioridad = 'Alta'">
+              <ion-icon name="flame-outline" class="prio-clean-icon"></ion-icon>
+              <span class="prio-name">Alta / Urgente</span>
+              <span class="prio-hint">Intervención inmediata</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Descripción del Hallazgo con Plantillas Rápidas -->
+        <div class="field-block">
+          <div class="field-header-row">
+            <label class="field-label">
+              <ion-icon name="document-text-outline"></ion-icon>
+              <span>4. Descripción Detallada del Hallazgo *</span>
+            </label>
+          </div>
+
+          <!-- Plantillas rápidas de 1-toque -->
+          <div class="templates-scroll-row">
+            <span class="template-hint">Sugerencias rápidas:</span>
+            <button
+              *ngFor="let plant of plantillasRapidas"
+              type="button"
+              class="template-pill"
+              (click)="seleccionarPlantilla(plant)">
+              {{ plant }}
+            </button>
+          </div>
+
+          <div class="input-shell textarea-shell">
+            <ion-textarea
+              [(ngModel)]="nuevaDescripcion"
+              placeholder="Detalla con precisión el hallazgo, ubicación exacta dentro del salón o equipo afectado..."
+              [rows]="4"
+              [autoGrow]="true"
+              [maxlength]="400"
+              [counter]="true"
+            ></ion-textarea>
+          </div>
+        </div>
+
+        <!-- 5. Responsable de la Inspección -->
+        <div class="field-block">
+          <label class="field-label">
+            <ion-icon name="person-circle-outline"></ion-icon>
+            <span>5. Auditor / Inspector Responsable</span>
+          </label>
+
+          <div class="input-shell">
+            <ion-input [(ngModel)]="nuevoInspector" placeholder="Nombre o cargo de quien inspecciona (ej: Ing. Gómez)"></ion-input>
+          </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="form-submit-section">
+          <button class="submit-action-btn" (click)="registrarInspeccion()">
+            <ion-icon name="save-outline"></ion-icon>
+            <span>Guardar Auditoría en Dispositivo</span>
+          </button>
+
+          <button class="clear-action-btn" (click)="limpiarFormulario()">
+            <ion-icon name="refresh-outline"></ion-icon>
+            <span>Limpiar Formulario</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- VISTA 3: GESTIÓN Y EXPEDIENTE DE AUDITORÍAS            -->
+  <!-- ======================================================= -->
+  <div *ngIf="segmentoActivo === 'listado'" class="listado-wrapper">
+    
+    <!-- Filtros Superiores -->
+    <div class="list-controls-card">
+      <div class="search-box">
+        <ion-icon name="search-outline"></ion-icon>
+        <input
+          type="text"
+          [(ngModel)]="terminoBusqueda"
+          (input)="onBuscar($event)"
+          placeholder="Buscar por código #AUD, espacio, novedad..."
+        />
+        <button *ngIf="terminoBusqueda" (click)="terminoBusqueda = ''; aplicarFiltros()" class="clear-search-btn">
+          <ion-icon name="close-circle"></ion-icon>
+        </button>
+      </div>
+
+      <!-- Chips de Filtro por Severidad -->
+      <div class="severity-filter-row">
+        <button
+          class="severity-tab tab-all"
+          [class.tab-active]="filtroPrioridad === 'Todas'"
+          (click)="filtrarPorPrioridad('Todas')">
+          Todas ({{ inspecciones.length }})
+        </button>
+        <button
+          class="severity-tab tab-alta"
+          [class.tab-active]="filtroPrioridad === 'Alta'"
+          (click)="filtrarPorPrioridad('Alta')">
+          Alta ({{ contarPorPrioridad('Alta') }})
+        </button>
+        <button
+          class="severity-tab tab-media"
+          [class.tab-active]="filtroPrioridad === 'Media'"
+          (click)="filtrarPorPrioridad('Media')">
+          Media ({{ contarPorPrioridad('Media') }})
+        </button>
+        <button
+          class="severity-tab tab-baja"
+          [class.tab-active]="filtroPrioridad === 'Baja'"
+          (click)="filtrarPorPrioridad('Baja')">
+          Baja ({{ contarPorPrioridad('Baja') }})
+        </button>
+      </div>
+    </div>
+
+    <!-- Feed de Tarjetas de Auditoría -->
+    <div *ngIf="inspeccionesFiltradas.length > 0; else emptyStateTemplate" class="audit-feed">
+      
+      <div
+        *ngFor="let item of inspeccionesFiltradas"
+        class="audit-card"
+        [ngClass]="'audit-border-' + item.prioridad.toLowerCase()">
+        
+        <!-- Cabecera de la Tarjeta -->
+        <div class="audit-card-top">
+          <div class="code-and-space">
+            <span class="ref-badge">#{{ item.codigoRef }}</span>
+            <span class="status-workflow-tag" [ngClass]="'status-' + (item.estado || 'Registrado').toLowerCase().replace(' ', '-')">
+              {{ item.estado || 'Registrado' }}
+            </span>
+          </div>
+
+          <div class="prio-tag-pill" [ngClass]="'prio-pill-' + item.prioridad.toLowerCase()">
+            Prioridad {{ item.prioridad }}
+          </div>
+        </div>
+
+        <div class="audit-space-title">
+          <ion-icon name="location-sharp"></ion-icon>
+          <h3>{{ item.espacio }}</h3>
+        </div>
+
+        <!-- Novedad Principal -->
+        <div class="audit-category-row">
+          <ion-icon [name]="obtenerIconoTipo(item.tipoNovedad)"></ion-icon>
+          <span>{{ item.tipoNovedad }}</span>
+        </div>
+
+        <!-- Cuadro de Hallazgo -->
+        <div class="audit-quote-box">
+          <p>{{ item.descripcion }}</p>
+        </div>
+
+        <!-- Footer con Metadatos y Menú de Acciones -->
+        <div class="audit-footer">
+          <div class="meta-details">
+            <div class="meta-item">
+              <ion-icon name="time-outline"></ion-icon>
+              <span>{{ formatearFecha(item.fechaRegistro) }}</span>
+            </div>
+            <div class="meta-item">
+              <ion-icon name="person-outline"></ion-icon>
+              <span>{{ item.inspector }}</span>
+            </div>
+          </div>
+
+          <div class="card-action-buttons">
+            <button class="btn-manage" (click)="abrirMenuAcciones(item)">
+              <ion-icon name="ellipsis-horizontal"></ion-icon>
+              <span>Gestionar</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Empty State -->
+    <ng-template #emptyStateTemplate>
+      <div class="corporate-empty-state">
+        <div class="empty-icon-shield">
+          <ion-icon name="shield-outline"></ion-icon>
+        </div>
+        <h3 *ngIf="inspecciones.length === 0">Sin Auditorías Registradas</h3>
+        <h3 *ngIf="inspecciones.length > 0">No hay coincidencias</h3>
+        <p *ngIf="inspecciones.length === 0">
+          Inicia una nueva inspección técnica para auditar el estado de los espacios académicos.
+        </p>
+        <p *ngIf="inspecciones.length > 0">
+          Prueba con otros términos de búsqueda o selecciona otra categoría de prioridad.
+        </p>
+        <button
+          *ngIf="inspecciones.length === 0"
+          class="empty-cta-btn"
+          (click)="segmentoActivo = 'formulario'">
+          <ion-icon name="add-circle-outline"></ion-icon>
+          <span>Crear Primer Registro</span>
+        </button>
+      </div>
+    </ng-template>
+
+  </div>
+
+</ion-content>
